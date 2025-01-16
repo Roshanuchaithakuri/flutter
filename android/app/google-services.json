@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "330333368628",
+    "project_id": "dumius-6f037",
+    "storage_bucket": "dumius-6f037.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:330333368628:android:463b47c4752d98e84e7561",
+        "android_client_info": {
+          "package_name": "com.example.domius"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdBmuBhYUoEYlkr3tM9Y6LPQK73S3SDKo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
