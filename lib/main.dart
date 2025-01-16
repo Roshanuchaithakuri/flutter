@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,15 +34,19 @@ class MyApp extends StatelessWidget {
         Provider<FirebaseService>(
           create: (_) => FirebaseService(),
         ),
-        Provider<AuthService>(
-          create: (_) => AuthService(),
+        ProxyProvider<FirebaseService, AuthService>(
+          update: (context, firebaseService, previous) => AuthService(),
+        ),
+        StreamProvider<User?>(
+          create: (context) => context.read<FirebaseService>().authStateChanges,
+          initialData: null,
         ),
       ],
       child: MaterialApp(
         title: 'Domius',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6C63FF)),
           useMaterial3: true,
           appBarTheme: const AppBarTheme(
             centerTitle: true,
@@ -54,81 +59,53 @@ class MyApp extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          cardTheme: CardTheme(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.grey[100],
+            border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
             ),
           ),
         ),
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-            
-            // Show home page if user is logged in
-            if (snapshot.hasData && snapshot.data != null) {
-              return  HomePage();
-            }
-            
-            // Show login screen if user is not logged in
-            return const LoginScreen();
-          },
-        ),
-        // Add error handling for when the app fails to initialize
-        builder: (context, child) {
-          return child ?? const Scaffold(
-            body: Center(
-              child: Text('Something went wrong'),
-            ),
-          );
-        },
+        home: const AuthWrapper(),
       ),
     );
   }
 }
-
-// Error widget configuration for development
-class _ErrorWidget extends StatelessWidget {
-  final FlutterErrorDetails errorDetails;
-
-  const _ErrorWidget({
-    required this.errorDetails,
-  });
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 60,
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Show loading indicator while waiting for auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'An error occurred',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              errorDetails.exceptionAsString(),
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+
+        // If we have a user, show HomePage
+        if (snapshot.hasData && snapshot.data != null) {
+          return HomePage();
+        }
+
+        // Otherwise, show LoginScreen
+        return const LoginScreen();
+      },
     );
   }
 }
