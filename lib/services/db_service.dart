@@ -19,7 +19,7 @@ class DeviceService {
     }
   }
 
-  void _setupListeners() {
+  void _setupListeners(){
     _channel?.stream.listen(
       (message) {
         print('Received from ESP32: $message');
