@@ -1,9 +1,8 @@
-// lib/pages/home_page.dart (continued from previous part)
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
 import '../widgets/circle_button.dart';
 import 'master_bedroom_page.dart';
-
+import 'settings_page.dart';
 import 'kitchen_page.dart';
 
 class RoomInfo {
@@ -30,7 +29,6 @@ class HomePage extends StatelessWidget {
       image: 'assets/master_bedroom.jpg',
       page: const MasterBedroomPage(),
     ),
- 
     RoomInfo(
       name: 'Kitchen',
       devices: '4 devices',
@@ -53,7 +51,7 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(context),  // Pass context here
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
@@ -81,7 +79,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {  // Add context parameter here
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -96,10 +94,23 @@ class HomePage extends StatelessWidget {
                 height: 60,
               ),
               Row(
-                children: const [
-                  CircleButton(icon: Icons.settings),
-                  SizedBox(width: 8),
-                  CircleButton(icon: Icons.notifications_outlined),
+                children: [
+                  CircleButton(
+                    icon: Icons.settings,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SettingsPage()),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  CircleButton(
+                    icon: Icons.notifications_outlined,
+                    onPressed: () {
+                      // TODO: Add notifications navigation
+                    },
+                  ),
                 ],
               ),
             ],

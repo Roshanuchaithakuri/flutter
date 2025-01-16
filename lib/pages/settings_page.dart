@@ -1,9 +1,11 @@
 // lib/pages/settings_page.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'about_us_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_conditions_page.dart';
 import 'home_page.dart';
+import '../pages/login_screen.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -19,8 +21,28 @@ class SettingsPage extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => HomePage()),
-      (route) => false, // This removes all previous routes from the stack
+      (route) => false,
     );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!context.mounted) return;
+      
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) =>  LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to log out. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -28,128 +50,167 @@ class SettingsPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            _buildHeader(),
-            _buildUserSection(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: Text(
-                        'Account Settings',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      _buildUserSection(),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Text(
+                          'Account Settings',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Edit profile',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.person_outline),
+                        title: const Text(
+                          'Edit profile',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () {
+                          // Navigate to Edit Profile
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.lock_outline),
+                        title: const Text(
+                          'Change password',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () {
+                          // Navigate to Change Password
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.payment),
+                        title: const Text(
+                          'Add a payment method',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () {
+                          // Navigate to Payment Method
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.notifications_outlined),
+                        title: const Text(
+                          'Push notifications',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () {
+                          // Navigate to Notifications
+                        },
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Text(
+                          'More',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.black),
-                      onTap: () {
-                        // Navigate to Edit Profile
-                      },
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Change password',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.info_outline),
+                        title: const Text(
+                          'About us',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () => _navigateToPage(context, const AboutUsPage()),
                       ),
-                      trailing: const Icon(Icons.chevron_right, color: Colors.black),
-                      onTap: () {
-                        // Navigate to Change Password
-                      },
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Add a payment method',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.privacy_tip_outlined),
+                        title: const Text(
+                          'Privacy policy',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () => _navigateToPage(context, const PrivacyPolicyPage()),
                       ),
-                      onTap: () {
-                        // Navigate to Payment Method
-                      },
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Push notifications',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(Icons.description_outlined),
+                        title: const Text(
+                          'Terms and conditions',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
+                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        onTap: () => _navigateToPage(context, const TermsConditionsPage()),
                       ),
-                      onTap: () {
-                        // Navigate to Notifications
-                      },
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                      child: Text(
-                        'More',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Divider(height: 32),
+                      ),
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        leading: const Icon(
+                          Icons.logout,
+                          color: Colors.red,
                         ),
-                      ),
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'About us',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
+                        title: const Text(
+                          'Logout',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.red,
+                          ),
                         ),
+                        onTap: () => _logout(context),
                       ),
-                      onTap: () => _navigateToPage(context, const AboutUsPage()),
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Privacy policy',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      onTap: () => _navigateToPage(context, const PrivacyPolicyPage()),
-                    ),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      title: const Text(
-                        'Terms and conditions',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                      onTap: () => _navigateToPage(context, const TermsConditionsPage()),
-                    ),
-                  ],
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            _buildBottomNav(context),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildBottomNav(context),
+            ),
           ],
         ),
       ),
