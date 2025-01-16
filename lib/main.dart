@@ -74,7 +74,7 @@ class MyApp extends StatelessWidget {
             
             // Show home page if user is logged in
             if (snapshot.hasData && snapshot.data != null) {
-              return const HomePage();
+              return  HomePage();
             }
             
             // Show login screen if user is not logged in

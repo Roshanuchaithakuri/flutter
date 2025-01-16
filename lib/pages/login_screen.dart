@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate to home page and clear navigation stack
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) =>  HomePage()),
           (route) => false,
         );
       }

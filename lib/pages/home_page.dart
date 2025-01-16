@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/circle_button.dart';
 import 'master_bedroom_page.dart';
-import 'living_room_page.dart';
+
 import 'kitchen_page.dart';
 
 class RoomInfo {
@@ -30,12 +30,7 @@ class HomePage extends StatelessWidget {
       image: 'assets/master_bedroom.jpg',
       page: const MasterBedroomPage(),
     ),
-    RoomInfo(
-      name: 'Living Room',
-      devices: '4 devices',
-      image: 'assets/living_room.jpg',
-      page: const LivingRoomPage(),
-    ),
+ 
     RoomInfo(
       name: 'Kitchen',
       devices: '4 devices',
