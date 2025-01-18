@@ -6,6 +6,7 @@ import 'privacy_policy_page.dart';
 import 'terms_conditions_page.dart';
 import 'home_page.dart';
 import 'login_screen.dart';
+import 'EditProfileScreen.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -29,9 +30,9 @@ class SettingsPage extends StatelessWidget {
     try {
       await FirebaseAuth.instance.signOut();
       if (!context.mounted) return;
-      
+
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) =>  LoginScreen()),
+        MaterialPageRoute(builder: (context) => LoginScreen()),
         (route) => false,
       );
     } catch (e) {
@@ -71,7 +72,8 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.person_outline),
                         title: const Text(
                           'Edit profile',
@@ -80,13 +82,20 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
                         onTap: () {
-                          // Navigate to Edit Profile
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const EditProfileScreen()),
+                          );
                         },
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.lock_outline),
                         title: const Text(
                           'Change password',
@@ -95,13 +104,20 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
                         onTap: () {
-                          // Navigate to Change Password
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    const EditProfileScreen()),
+                          );
                         },
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.payment),
                         title: const Text(
                           'Add a payment method',
@@ -110,13 +126,15 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
                         onTap: () {
                           // Navigate to Payment Method
                         },
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.notifications_outlined),
                         title: const Text(
                           'Push notifications',
@@ -125,7 +143,8 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
                         onTap: () {
                           // Navigate to Notifications
                         },
@@ -141,7 +160,8 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.info_outline),
                         title: const Text(
                           'About us',
@@ -150,11 +170,14 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
-                        onTap: () => _navigateToPage(context, const AboutUsPage()),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
+                        onTap: () =>
+                            _navigateToPage(context, const AboutUsPage()),
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.privacy_tip_outlined),
                         title: const Text(
                           'Privacy policy',
@@ -163,11 +186,14 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
-                        onTap: () => _navigateToPage(context, const PrivacyPolicyPage()),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
+                        onTap: () =>
+                            _navigateToPage(context, const PrivacyPolicyPage()),
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(Icons.description_outlined),
                         title: const Text(
                           'Terms and conditions',
@@ -176,15 +202,18 @@ class SettingsPage extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        trailing: const Icon(Icons.chevron_right, color: Colors.black),
-                        onTap: () => _navigateToPage(context, const TermsConditionsPage()),
+                        trailing: const Icon(Icons.chevron_right,
+                            color: Colors.black),
+                        onTap: () => _navigateToPage(
+                            context, const TermsConditionsPage()),
                       ),
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
                         child: Divider(height: 32),
                       ),
                       ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
                         leading: const Icon(
                           Icons.logout,
                           color: Colors.black,
@@ -323,7 +352,8 @@ class SettingsPage extends StatelessWidget {
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+            child:
+                const Icon(Icons.calendar_today_outlined, color: Colors.grey),
           ),
         ],
       ),
