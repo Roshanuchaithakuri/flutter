@@ -1,15 +1,13 @@
 // lib/screens/register_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
-import '../utils/validation_util.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
 
   @override
-  createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -22,65 +20,90 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  Future<void> _register() async {
-  if (!_formKey.currentState!.validate()) return;
+Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  try {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    // Create the user account
-    final userCredential = await authService.signUp(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    try {
+      // Direct Firebase Auth call
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    if (!mounted) return;
-
-    if (userCredential.user != null) {
-      // Clear the form
+      if (!mounted) return;
+      
+      // Clear form fields
       _emailController.clear();
       _passwordController.clear();
       _confirmPasswordController.clear();
-
-      // No need to navigate manually - let AuthWrapper handle it
-      // Optional: Pop the register screen to prevent going back to it
+      
+      // Return to login screen
+      Navigator.of(context).pop();
+      
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        switch (e.code) {
+          case 'email-already-in-use':
+            _errorMessage = 'An account already exists with this email.';
+            break;
+          case 'invalid-email':
+            _errorMessage = 'Invalid email address.';
+            break;
+          case 'weak-password':
+            _errorMessage = 'Please enter a stronger password.';
+            break;
+          default:
+            _errorMessage = 'Registration failed. Please try again.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'An unexpected error occurred.';
+      });
+    } finally {
       if (mounted) {
-        Navigator.of(context).pop();
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
-  } on FirebaseAuthException catch (e) {
-    setState(() {
-      _errorMessage = _getErrorMessage(e.code);
-    });
-  } catch (e) {
-    setState(() {
-      _errorMessage = 'An unexpected error occurred. Please try again.';
-    });
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
-}
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'operation-not-allowed':
-        return 'Email/password registration is not enabled.';
-      case 'weak-password':
-        return 'Please enter a stronger password.';
-      default:
-        return 'Registration failed. Please try again.';
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
     }
+    if (!value.contains('@') || !value.contains('.')) {
+      return 'Please enter a valid email';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password';
+    }
+    if (value != _passwordController.text) {
+      return 'Passwords do not match';
+    }
+    return null;
   }
 
   @override
@@ -112,7 +135,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           color: const Color(0xFF6C63FF),
                         ),
                   ),
-                  const SizedBox(height: 8),// lib/screens/register_screen.dart (continued)
+                  const SizedBox(height: 8),
                   Text(
                     'Please fill in the form to continue',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -121,6 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 32),
 
+                  // Error Message
                   if (_errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -143,6 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
 
+                  // Form Fields
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -162,10 +187,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
-                    validator: ValidationUtils.validateEmail,
+                    validator: _validateEmail,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 16),
@@ -196,10 +224,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
-                    validator: ValidationUtils.validatePassword,
+                    validator: _validatePassword,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 16),
@@ -230,17 +261,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor,
+                          width: 2,
+                        ),
                       ),
                     ),
-                    validator: (value) => ValidationUtils.validateConfirmPassword(
-                      value,
-                      _passwordController.text,
-                    ),
+                    validator: _validateConfirmPassword,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
                   const SizedBox(height: 32),
 
+                  // Register Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -275,6 +307,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Login Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

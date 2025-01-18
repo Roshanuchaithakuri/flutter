@@ -1,10 +1,8 @@
 // lib/screens/login_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
 import 'register_page.dart';
-import '../utils/validation_util.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -21,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
   bool _obscurePassword = true;
 
-  Future<void> _login() async {
+Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -30,23 +28,45 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.signIn(
-        _emailController.text.trim(),
-        _passwordController.text,
+      // Direct Firebase Auth call
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
       );
 
       if (!mounted) return;
+      
+      // Clear form fields on success
       _emailController.clear();
       _passwordController.clear();
       
+      // Navigation will be handled by AuthWrapper
+      
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      
       setState(() {
-        _errorMessage = _getErrorMessage(e.code);
+        switch (e.code) {
+          case 'user-not-found':
+            _errorMessage = 'No account found with this email.';
+            break;
+          case 'wrong-password':
+            _errorMessage = 'Incorrect password.';
+            break;
+          case 'invalid-email':
+            _errorMessage = 'Invalid email address.';
+            break;
+          case 'user-disabled':
+            _errorMessage = 'This account has been disabled.';
+            break;
+          default:
+            _errorMessage = 'Login failed. Please try again.';
+        }
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'An unexpected error occurred. Please try again.';
+        _errorMessage = 'An unexpected error occurred.';
       });
     } finally {
       if (mounted) {
@@ -56,20 +76,24 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
-
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      default:
-        return 'Failed to sign in. Please try again.';
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
     }
+    if (!value.contains('@') || !value.contains('.')) {
+      return 'Please enter a valid email';
+    }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
   }
 
   @override
@@ -78,19 +102,23 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
+                
+                // Logo
                 Image.asset(
                   'assets/logo.png',
                   height: 80,
                   width: 80,
                 ),
                 const SizedBox(height: 24),
+                
+                // Welcome Text
                 Text(
                   'Welcome to DOMIUS',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -99,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                 ),
                 const SizedBox(height: 8),
+                
                 Text(
                   'Login or Sign Up',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -107,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
 
+                // Error Message
                 if (_errorMessage != null)
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -129,6 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
+                // Email Field
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -151,11 +182,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
                     ),
                   ),
-                  validator: ValidationUtils.validateEmail,
+                  validator: _validateEmail,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 16),
 
+                // Password Field
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
@@ -165,16 +197,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+                        _obscurePassword ? Icons.visibility : Icons.visibility_off,
                         color: Colors.grey[600],
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     filled: true,
                     fillColor: Colors.grey[100],
@@ -191,11 +217,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
                     ),
                   ),
-                  validator: ValidationUtils.validatePassword,
+                  validator: _validatePassword,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                 ),
                 const SizedBox(height: 24),
 
+                // Login Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -230,6 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // Register Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -240,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>  RegisterScreen(),
+                                builder: (context) => const RegisterScreen(),
                               ),
                             );
                           },
@@ -262,6 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // Forgot Password Button
                 TextButton(
                   onPressed: _isLoading ? null : () {
                     // Add forgot password functionality

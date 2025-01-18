@@ -5,7 +5,7 @@ import 'about_us_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_conditions_page.dart';
 import 'home_page.dart';
-import '../pages/login_screen.dart';
+import 'login_screen.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -39,7 +39,7 @@ class SettingsPage extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to log out. Please try again.'),
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.black,
         ),
       );
     }
@@ -187,14 +187,14 @@ class SettingsPage extends StatelessWidget {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         leading: const Icon(
                           Icons.logout,
-                          color: Colors.red,
+                          color: Colors.black,
                         ),
                         title: const Text(
                           'Logout',
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.red,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black,
                           ),
                         ),
                         onTap: () => _logout(context),
