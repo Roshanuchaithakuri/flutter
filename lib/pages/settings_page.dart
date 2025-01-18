@@ -1,6 +1,6 @@
-// lib/pages/settings_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'about_us_page.dart';
 import 'privacy_policy_page.dart';
 import 'terms_conditions_page.dart';
@@ -48,6 +48,8 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -60,7 +62,30 @@ class SettingsPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildHeader(),
-                      _buildUserSection(),
+                      StreamBuilder<DocumentSnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user?.uid)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData) {
+                            final userData = snapshot.data?.data() as Map<String, dynamic>?;
+                            final firstName = userData?['firstName'] as String? ?? '';
+                            final lastName = userData?['lastName'] as String? ?? '';
+                            final email = userData?['email'] as String? ?? '';
+                            final profileImage = userData?['profileImage'] as String? ?? '';
+                            
+                            return _buildUserSection(
+                              user, 
+                              firstName, 
+                              lastName, 
+                              email, 
+                              profileImage
+                            );
+                          }
+                          return const Center(child: CircularProgressIndicator());
+                        },
+                      ),
                       const Padding(
                         padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
                         child: Text(
@@ -91,62 +116,6 @@ class SettingsPage extends StatelessWidget {
                                 builder: (context) =>
                                     const EditProfileScreen()),
                           );
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        leading: const Icon(Icons.lock_outline),
-                        title: const Text(
-                          'Change password',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.black),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) =>
-                                    const EditProfileScreen()),
-                          );
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        leading: const Icon(Icons.payment),
-                        title: const Text(
-                          'Add a payment method',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.black),
-                        onTap: () {
-                          // Navigate to Payment Method
-                        },
-                      ),
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        leading: const Icon(Icons.notifications_outlined),
-                        title: const Text(
-                          'Push notifications',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        trailing: const Icon(Icons.chevron_right,
-                            color: Colors.black),
-                        onTap: () {
-                          // Navigate to Notifications
                         },
                       ),
                       const Padding(
@@ -288,22 +257,43 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildUserSection() {
+  Widget _buildUserSection(User? user, String firstName, String lastName, String email, String profileImage) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(16),
       color: Colors.purple.shade50,
       child: Row(
-        children: const [
-          Icon(
-            Icons.person_outline,
-            size: 24,
+        children: [
+          CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.grey[200],
+            backgroundImage: profileImage.isNotEmpty 
+                ? AssetImage(profileImage)
+                : null,
+            child: profileImage.isEmpty
+                ? const Icon(Icons.person_outline, size: 30, color: Colors.grey)
+                : null,
           ),
-          SizedBox(width: 12),
-          Text(
-            'User',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$firstName $lastName',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -314,46 +304,17 @@ class SettingsPage extends StatelessWidget {
   Widget _buildBottomNav(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            offset: const Offset(0, -1),
-            blurRadius: 4,
-          ),
-        ],
-      ),
+      color: Colors.white,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          GestureDetector(
-            onTap: () => _navigateToHome(context),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.home_outlined, color: Colors.grey),
+          IconButton(
+            icon: Icon(
+              Icons.home_outlined,
+              color: Colors.purple[700],
+              size: 28,
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.mic_outlined, color: Colors.grey),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child:
-                const Icon(Icons.calendar_today_outlined, color: Colors.grey),
+            onPressed: () => _navigateToHome(context),
           ),
         ],
       ),
