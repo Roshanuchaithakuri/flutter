@@ -61,6 +61,8 @@ class FirebaseService {
     }
   }
 
+
+
   // Device Operations
   Stream<List<Device>> getDevicesForRoom(String roomId) {
     return _firestore
@@ -105,32 +107,32 @@ class FirebaseService {
     }
   }
 
-  // Schedule Operations
-  Stream<List<Schedule>> getSchedulesForDevice(String deviceId) {
-    return _firestore
-        .collection('schedules')
-        .where('deviceId', isEqualTo: deviceId)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        Map<String, dynamic> data = doc.data();
-        data['id'] = doc.id;
-        return Schedule.fromMap(data);
-      }).toList();
-    });
-  }
+  // // Schedule Operations
+  // Stream<List<Schedule>> getSchedulesForDevice(String deviceId) {
+  //   return _firestore
+  //       .collection('schedules')
+  //       .where('deviceId', isEqualTo: deviceId)
+  //       .snapshots()
+  //       .map((snapshot) {
+  //     return snapshot.docs.map((doc) {
+  //       Map<String, dynamic> data = doc.data();
+  //       data['id'] = doc.id;
+  //       return Schedule.fromMap(data);
+  //     }).toList();
+  //   });
+  // }
 
-  Future<void> addSchedule(Schedule schedule) async {
-    try {
-      await _firestore
-          .collection('schedules')
-          .doc(schedule.id)
-          .set(schedule.toMap());
-    } catch (e) {
-      print('Error adding schedule: $e');
-      rethrow;
-    }
-  }
+  // Future<void> addSchedule(Schedule schedule) async {
+  //   try {
+  //     await _firestore
+  //         .collection('schedules')
+  //         .doc(schedule.id)
+  //         .set(schedule.toMap());
+  //   } catch (e) {
+  //     print('Error adding schedule: $e');
+  //     rethrow;
+  //   }
+  // }
 
   Future<void> deleteSchedule(String scheduleId) async {
     try {
@@ -185,5 +187,29 @@ class FirebaseService {
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
+ // Add this after your other room operations in firebase_service.dart
+Future<void> deleteRoom(String roomId) async {
+    // Get a reference to the room document
+    final roomRef = _firestore.collection('rooms').doc(roomId);
+    
+    // Get all devices in this room
+    final devicesSnapshot = await _firestore
+        .collection('devices')
+        .where('roomId', isEqualTo: roomId)
+        .get();
 
+    // Start a batch write
+    final batch = _firestore.batch();
+
+    // Add room deletion to batch
+    batch.delete(roomRef);
+
+    // Add all device deletions to batch
+    for (var doc in devicesSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Commit the batch
+    await batch.commit();
+}
 }

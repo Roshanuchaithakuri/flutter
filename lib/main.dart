@@ -1,8 +1,8 @@
 // lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'services/scheduler_service.dart';
 import 'pages/login_screen.dart';
 import 'pages/home_page.dart';
 
@@ -18,7 +18,11 @@ void main() async {
       storageBucket: 'dumius-6f037.firebasestorage.app',
     ),
   );
-  
+
+  // Start the scheduler service
+  final schedulerService = SchedulerService();
+  schedulerService.startScheduler();
+
   runApp(const MyApp());
 }
 
