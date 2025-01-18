@@ -77,6 +77,46 @@ class Room {
   }
 }
 
+class AppNotification {
+  final String id;
+  final String title;
+  final String message;
+  final DateTime timestamp;
+  final String type; // 'room_added', 'room_deleted', 'device_added', 'device_deleted', 'device_on', 'device_off', 'schedule_set', 'schedule_cleared'
+  final bool isRead;
+
+  AppNotification({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.timestamp,
+    required this.type,
+    this.isRead = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'message': message,
+      'timestamp': timestamp.toIso8601String(),
+      'type': type,
+      'isRead': isRead,
+    };
+  }
+
+  factory AppNotification.fromMap(Map<String, dynamic> map) {
+    return AppNotification(
+      id: map['id'],
+      title: map['title'],
+      message: map['message'],
+      timestamp: DateTime.parse(map['timestamp']),
+      type: map['type'],
+      isRead: map['isRead'] ?? false,
+    );
+  }
+}
+
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -91,10 +131,27 @@ class FirebaseService {
     });
   }
 
+  Future<void> deleteRoom(String roomId) async {
+    final roomRef = _firestore.collection('rooms').doc(roomId);
+    
+    final devicesSnapshot = await _firestore
+        .collection('devices')
+        .where('roomId', isEqualTo: roomId)
+        .get();
+
+    final batch = _firestore.batch();
+    batch.delete(roomRef);
+
+    for (var doc in devicesSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
+  }
+
   // Device operations
   Future<void> addDevice(Device device) async {
     await _firestore.collection('devices').doc(device.id).set(device.toMap());
-    // Update room device count
     await _firestore.collection('rooms').doc(device.roomId).update({
       'deviceCount': FieldValue.increment(1),
     });
@@ -108,6 +165,14 @@ class FirebaseService {
         .map((snapshot) {
       return snapshot.docs.map((doc) => Device.fromMap(doc.data())).toList();
     });
+  }
+
+  Stream<Device> getDeviceStream(String deviceId) {
+    return _firestore
+        .collection('devices')
+        .doc(deviceId)
+        .snapshots()
+        .map((snapshot) => Device.fromMap(snapshot.data()!));
   }
 
   Future<void> toggleDevice(String deviceId, bool isActive) async {
@@ -130,31 +195,50 @@ class FirebaseService {
     });
   }
 
-
-  Future<void> deleteRoom(String roomId) async {
-    final roomRef = _firestore.collection('rooms').doc(roomId);
-    
-    final devicesSnapshot = await _firestore
-        .collection('devices')
-        .where('roomId', isEqualTo: roomId)
-        .get();
-
-    final batch = _firestore.batch();
-    batch.delete(roomRef);
-
-    for (var doc in devicesSnapshot.docs) {
-      batch.delete(doc.reference);
+  // Notification operations
+  Future<void> addNotification(AppNotification notification) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notification.id)
+          .set(notification.toMap());
+    } catch (e) {
+      print('Error adding notification: $e');
+      rethrow;
     }
+  }
 
-    await batch.commit();
-}
+  Stream<List<AppNotification>> getNotifications() {
+    return _firestore
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => AppNotification.fromMap({...doc.data(), 'id': doc.id}))
+            .toList());
+  }
 
-Stream<Device> getDeviceStream(String deviceId) {
-  return FirebaseFirestore.instance
-      .collection('devices')
-      .doc(deviceId)
-      .snapshots()
-      .map((snapshot) => Device.fromMap(snapshot.data()!));
-}
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+    } catch (e) {
+      print('Error marking notification as read: $e');
+      rethrow;
+    }
+  }
 
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+    } catch (e) {
+      print('Error deleting notification: $e');
+      rethrow;
+    }
+  }
 }

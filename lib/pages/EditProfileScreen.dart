@@ -91,6 +91,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           
           await user.reauthenticateWithCredential(credential);
           await user.updatePassword(_newPasswordController.text);
+          
         }
 
         if (mounted) {
@@ -134,6 +135,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
     }
+
+    
   }
 
   @override

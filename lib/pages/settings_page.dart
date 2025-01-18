@@ -8,8 +8,10 @@ import 'home_page.dart';
 import 'login_screen.dart';
 import 'EditProfileScreen.dart';
 
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
 
   void _navigateToPage(BuildContext context, Widget page) {
     Navigator.push(
@@ -248,10 +250,12 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.notifications_outlined),
+          //   onPressed: () {
+              
+          //   },
+          // ),
         ],
       ),
     );
@@ -310,9 +314,9 @@ class SettingsPage extends StatelessWidget {
         children: [
           IconButton(
             icon: Icon(
-              Icons.home_outlined,
-              color: Colors.purple[700],
-              size: 28,
+             
+           Icons.home, color: Colors.purple[400], size: 28
+            
             ),
             onPressed: () => _navigateToHome(context),
           ),

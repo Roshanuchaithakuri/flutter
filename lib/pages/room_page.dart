@@ -1,4 +1,3 @@
-// lib/pages/room_page.dart
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import 'schedule_page.dart';
@@ -18,6 +17,17 @@ class RoomPage extends StatefulWidget {
 class _RoomPageState extends State<RoomPage> {
   final FirebaseService _firebaseService = FirebaseService();
 
+  Future<void> _createNotification(String title, String message, String type) async {
+    final notification = AppNotification(
+      id: 'notification_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      type: type,
+    );
+    await _firebaseService.addNotification(notification);
+  }
+
   void _addDevice() {
     showDialog(
       context: context,
@@ -30,6 +40,14 @@ class _RoomPageState extends State<RoomPage> {
             icon: iconName,
           );
           await _firebaseService.addDevice(device);
+          
+          // Create notification for device addition
+          await _createNotification(
+            'Device Added',
+            'New device "$name" has been added to ${widget.room.name}',
+            'device_added'
+          );
+          
           if (!mounted) return;
           Navigator.pop(context);
         },
@@ -56,6 +74,38 @@ class _RoomPageState extends State<RoomPage> {
           }
 
           final devices = snapshot.data!;
+          if (devices.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.devices_other,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No devices yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Add your first device by tapping the + button',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return GridView.builder(
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -76,142 +126,159 @@ class _RoomPageState extends State<RoomPage> {
     );
   }
 
-Widget _buildDeviceCard(Device device) {
-  void _showDeleteConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Device'),
-        content: Text('Are you sure you want to delete "${device.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _firebaseService.deleteDevice(device);
-                Navigator.pop(context);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${device.name} has been deleted')),
-                );
-              } catch (e) {
-                Navigator.pop(context);
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to delete device')),
-                );
-              }
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Colors.red[700]),
+  Widget _buildDeviceCard(Device device) {
+    void _showDeleteConfirmation() {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Device'),
+          content: Text('Are you sure you want to delete "${device.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await _firebaseService.deleteDevice(device);
+                  
+                  // Create notification for device deletion
+                  await _createNotification(
+                    'Device Deleted',
+                    '${device.name} has been removed from ${widget.room.name}',
+                    'device_deleted'
+                  );
+                  
+                  Navigator.pop(context);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${device.name} has been deleted')),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete device')),
+                  );
+                }
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(color: Colors.red[700]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    bool hasActiveSchedule() {
+      if (device.scheduleStart == null || device.scheduleEnd == null) return false;
+      final now = DateTime.now();
+      return now.isAfter(device.scheduleStart!) && now.isBefore(device.scheduleEnd!);
+    }
+
+    return Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                IconData(
+                  int.parse(device.icon),
+                  fontFamily: 'MaterialIcons',
+                ),
+                size: 40,
+                color: device.isActive ? Colors.purple[400] : Colors.grey,
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  device.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Switch(
+                    value: device.isActive,
+                    onChanged: (value) async {
+                      await _firebaseService.toggleDevice(device.id, value);
+                      
+                      // Create notification for device toggle
+                      await _createNotification(
+                        'Device ${value ? 'Turned On' : 'Turned Off'}',
+                        '${device.name} has been turned ${value ? 'on' : 'off'} in ${widget.room.name}',
+                        value ? 'device_on' : 'device_off'
+                      );
+                    },
+                    activeColor: Colors.purple[400],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.schedule),
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SchedulePage(device: device),
+                        ),
+                      );
+                      
+                      // Create notification for schedule update if schedule was set
+                      if (result == true) {
+                        await _createNotification(
+                          'Schedule Updated',
+                          'Schedule has been set for ${device.name} in ${widget.room.name}',
+                          'schedule_set'
+                        );
+                      }
+                    },
+                    color: device.scheduleStart != null ? Colors.purple[400] : Colors.grey,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 3,
+          right: 3,
+          child: IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _showDeleteConfirmation,
+            color: Colors.purple[700],
+            iconSize: 18,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            splashRadius: 20,
+          ),
+        ),
+      ],
     );
   }
-
-  // Check if device has active schedule
-  bool hasActiveSchedule() {
-    if (device.scheduleStart == null || device.scheduleEnd == null) return false;
-    final now = DateTime.now();
-    return now.isAfter(device.scheduleStart!) && now.isBefore(device.scheduleEnd!);
-  }
-
-  return Stack(
-    children: [
-      Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Main device icon
-            Icon(
-              IconData(
-                int.parse(device.icon),
-                fontFamily: 'MaterialIcons',
-              ),
-              size: 40,
-              color: device.isActive ? Colors.purple[400] : Colors.grey,
-            ),
-            const SizedBox(height: 8),
-            // Device name
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                device.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Controls row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Power switch
-                Switch(
-                  value: device.isActive,
-                  onChanged: (value) {
-                    _firebaseService.toggleDevice(device.id, value);
-                  },
-                  activeColor: Colors.purple[400],
-                ),
-                // Schedule button
-                IconButton(
-                  icon: const Icon(Icons.schedule),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SchedulePage(device: device),
-                      ),
-                    );
-                  },
-                  color: device.scheduleStart != null ? Colors.purple[400] : Colors.grey,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      // Delete button positioned at top-right
-      Positioned(
-        top: 3,
-        right: 3,
-        child: IconButton(
-          icon: const Icon(Icons.delete_outline),
-          onPressed: _showDeleteConfirmation,
-          color: Colors.purple[700],
-          iconSize: 18,
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          splashRadius: 20,
-        ),
-      ),
-    ],
-  );
-}}
-
+}
 
 
 class AddDeviceDialog extends StatefulWidget {

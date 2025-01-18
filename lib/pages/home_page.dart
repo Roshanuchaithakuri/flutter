@@ -5,7 +5,6 @@ import 'room_page.dart';
 import 'notification_page.dart';
 import 'settings_page.dart';
 
-
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -32,6 +31,17 @@ class _HomeContentState extends State<HomeContent> {
   ];
   int _currentImageIndex = 0;
 
+  Future<void> _createNotification(String title, String message, String type) async {
+    final notification = AppNotification(
+      id: 'notification_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      type: type,
+    );
+    await _firebaseService.addNotification(notification);
+  }
+
   void _addRoom() {
     showDialog(
       context: context,
@@ -43,6 +53,14 @@ class _HomeContentState extends State<HomeContent> {
             image: _roomImages[_currentImageIndex],
           );
           await _firebaseService.addRoom(room);
+          
+          // Create notification for room addition
+          await _createNotification(
+            'Room Added',
+            'New room "$name" has been added',
+            'room_added',
+          );
+          
           setState(() {
             _currentImageIndex = (_currentImageIndex + 1) % _roomImages.length;
           });
@@ -51,6 +69,59 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
+// Inside your _buildNotificationButton() method in HomePage
+Widget _buildNotificationButton() {
+  return StreamBuilder<List<AppNotification>>(
+    stream: _firebaseService.getNotifications(),
+    builder: (context, snapshot) {
+      final unreadCount = snapshot.data?.where((n) => !n.isRead).length ?? 0;
+      
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          CircleAvatar(
+            backgroundColor: Colors.grey[100],
+            child: IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationPage()),
+                );
+              },
+              color: Colors.grey[600],
+            ),
+          ),
+          if (unreadCount > 0)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 14,
+                  minHeight: 14,
+                ),
+                child: Text(
+                  unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+}
 
   Widget _buildHeader() {
     return Padding(
@@ -65,19 +136,7 @@ class _HomeContentState extends State<HomeContent> {
           ),
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: Colors.grey[100],
-                child: IconButton(
-                  icon: const Icon(Icons.notifications_outlined),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotificationPage()),
-                    );
-                  },
-                  color: Colors.grey[600],
-                ),
-              ),
+              _buildNotificationButton(),
               const SizedBox(width: 8),
               CircleAvatar(
                 backgroundColor: Colors.grey[100],
@@ -158,146 +217,152 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
-Widget _buildRoomCard(BuildContext context, Room room) {
-  final screenWidth = MediaQuery.of(context).size.width;
-  final cardHeight = screenWidth * 0.3;
-  
-  void _showDeleteConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Room'),
-        content: Text('Are you sure you want to delete "${room.name}"? This will also delete all devices in this room.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await _firebaseService.deleteRoom(room.id);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${room.name} has been deleted')),
-                );
-              } catch (e) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to delete room')),
-                );
-              }
-            },
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Colors.red[700]),
+
+  Widget _buildRoomCard(BuildContext context, Room room) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardHeight = screenWidth * 0.3;
+
+    void _showDeleteConfirmation() {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Delete Room'),
+          content: Text('Are you sure you want to delete "${room.name}"? This will also delete all devices in this room.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
             ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await _firebaseService.deleteRoom(room.id);
+                  
+                  // Create notification for room deletion
+                  await _createNotification(
+                    'Room Deleted',
+                    'Room "${room.name}" has been deleted',
+                    'room_deleted',
+                  );
+                  
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${room.name} has been deleted')),
+                  );
+                } catch (e) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to delete room')),
+                  );
+                }
+              },
+              child: Text(
+                'Delete',
+                style: TextStyle(color: Colors.red[700]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RoomPage(room: room),
           ),
-        ],
+        );
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Container(
+            height: cardHeight,
+            margin: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    child: Image.asset(
+                      room.image,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          room.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${room.deviceCount} devices',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            InkWell(
+                              onTap: _showDeleteConfirmation,
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.purple[400],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RoomPage(room: room),
-        ),
-      );
-    },
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        return Container(
-          height: cardHeight,
-          margin: const EdgeInsets.symmetric(
-            horizontal: 4,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                flex: 5,
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  child: Image.asset(
-                    room.image,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        room.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${room.deviceCount} devices',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          InkWell(
-                            onTap: _showDeleteConfirmation,
-                            child: Icon(
-                              Icons.delete_outline,
-                              size: 18,
-                              color: Colors.purple[400],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    ),
-  );
-}
-  
-  
-  
-  
   Widget _buildBottomNav() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -399,7 +464,7 @@ class AddRoomDialog extends StatefulWidget {
 
 class _AddRoomDialogState extends State<AddRoomDialog> {
   final _nameController = TextEditingController();
-final List<String> _roomTypes = [
+  final List<String> _roomTypes = [
     'Living Room',
     'Master Bedroom',
     'Guest Bedroom',
@@ -414,7 +479,6 @@ final List<String> _roomTypes = [
     'Laundry Room',
     'Garage',
     'Basement',
-    'Attic',
     'Entertainment Room',
     'Game Room',
     'Home Theater',
@@ -426,7 +490,7 @@ final List<String> _roomTypes = [
     'Balcony',
     'Garden',
     'Other'
-];
+  ];
 
   @override
   void dispose() {

@@ -32,6 +32,17 @@ class _SchedulePageState extends State<SchedulePage> {
     _setupDeviceStream();
   }
 
+  Future<void> _createNotification(String title, String message, String type) async {
+    final notification = AppNotification(
+      id: 'notification_${DateTime.now().millisecondsSinceEpoch}',
+      title: title,
+      message: message,
+      timestamp: DateTime.now(),
+      type: type,
+    );
+    await _firebaseService.addNotification(notification);
+  }
+
   void _initializeDeviceData() {
     _startTime = widget.device.scheduleStart != null
         ? TimeOfDay.fromDateTime(widget.device.scheduleStart!)
@@ -127,6 +138,17 @@ class _SchedulePageState extends State<SchedulePage> {
         endDateTime,
       );
 
+      // Create notification for schedule update
+      final scheduleDetails = _hasEndTime && _endTime != null
+          ? '${_formatTimeOfDay(_startTime)} to ${_formatTimeOfDay(_endTime)}'
+          : 'starts at ${_formatTimeOfDay(_startTime)}';
+      
+      await _createNotification(
+        'Schedule Set',
+        '${widget.device.name} scheduled: $scheduleDetails',
+        'schedule_set'
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -134,7 +156,7 @@ class _SchedulePageState extends State<SchedulePage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true); // Return true to indicate schedule was set
       }
     } catch (e) {
       if (mounted) {
@@ -154,6 +176,13 @@ class _SchedulePageState extends State<SchedulePage> {
         widget.device.id,
         null,
         null,
+      );
+
+      // Create notification for schedule clearing
+      await _createNotification(
+        'Schedule Cleared',
+        'Schedule for ${widget.device.name} has been cleared',
+        'schedule_cleared'
       );
 
       if (mounted) {
