@@ -21,8 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
-  // For storing user data
+  
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -35,43 +34,45 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Create user with email and password
       final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      // Get the newly created user's ID
       final String userId = userCredential.user!.uid;
 
-      // Create user document in Firestore
       await _firestore.collection('users').doc(userId).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
-        'profileImage': 'assets/profile/default_avatar.png',
+        'profileImage': 'assets/profile.png',
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      if (mounted) {
-        // Success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Navigate to home screen and clear the stack
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-      }
+      if (!mounted) return;
+
+      // Success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate to home page
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       
     } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}'); // Add logging
+      if (!mounted) return;
+      
       setState(() {
         switch (e.code) {
           case 'email-already-in-use':
             _errorMessage = 'An account already exists with this email.';
+            _passwordController.clear();
+            _confirmPasswordController.clear();
             break;
           case 'invalid-email':
             _errorMessage = 'Invalid email address.';
@@ -83,12 +84,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _errorMessage = 'Please enter a stronger password.';
             break;
           default:
-            _errorMessage = 'Registration failed. Please try again.';
+            _errorMessage = e.message ?? 'Registration failed. Please try again.';
         }
       });
     } catch (e) {
+      print('Registration error: $e'); // Add logging
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'An unexpected error occurred.';
+        _errorMessage = 'An unexpected error occurred. Please try again.';
       });
     } finally {
       if (mounted) {

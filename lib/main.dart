@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'services/scheduler_service.dart';
 import 'pages/login_screen.dart';
 import 'pages/home_page.dart';
-import 'pages/register_page.dart'; // Add this import
+import 'pages/register_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +19,6 @@ void main() async {
     ),
   );
 
-  // Start the scheduler service
   final schedulerService = SchedulerService();
   schedulerService.startScheduler();
 
@@ -65,10 +64,8 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Define named routes
-      initialRoute: '/',
+      home: const AuthWrapper(),
       routes: {
-        '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomePage(),
@@ -85,21 +82,23 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Show loading indicator while waiting for auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
+              ),
             ),
           );
         }
 
-        // If we have a user, show HomePage
         if (snapshot.hasData && snapshot.data != null) {
-          return const HomePage();
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pushReplacementNamed(context, '/home');
+          });
+          return const SizedBox.shrink();
         }
 
-        // Otherwise, show LoginScreen
         return const LoginScreen();
       },
     );

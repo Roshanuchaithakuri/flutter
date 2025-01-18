@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
   bool _obscurePassword = true;
 
-Future<void> _login() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -28,7 +28,6 @@ Future<void> _login() async {
     });
 
     try {
-      // Direct Firebase Auth call
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -36,13 +35,15 @@ Future<void> _login() async {
 
       if (!mounted) return;
       
-      // Clear form fields on success
+      // Clear form fields
       _emailController.clear();
       _passwordController.clear();
       
-      // Navigation will be handled by AuthWrapper
+      // Navigate to home page
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       
     } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException: ${e.code} - ${e.message}'); // Add logging
       if (!mounted) return;
       
       setState(() {
@@ -52,6 +53,7 @@ Future<void> _login() async {
             break;
           case 'wrong-password':
             _errorMessage = 'Incorrect password.';
+            _passwordController.clear(); // Clear password on error
             break;
           case 'invalid-email':
             _errorMessage = 'Invalid email address.';
@@ -60,13 +62,14 @@ Future<void> _login() async {
             _errorMessage = 'This account has been disabled.';
             break;
           default:
-            _errorMessage = 'Login failed. Please try again.';
+            _errorMessage = e.message ?? 'Login failed. Please try again.';
         }
       });
     } catch (e) {
+      print('Login error: $e'); // Add logging
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'An unexpected error occurred.';
+        _errorMessage = 'An unexpected error occurred. Please try again.';
       });
     } finally {
       if (mounted) {
