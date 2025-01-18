@@ -1,7 +1,6 @@
-// lib/screens/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -12,15 +11,22 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-Future<void> _register() async {
+  // For storing user data
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -29,25 +35,39 @@ Future<void> _register() async {
     });
 
     try {
-      // Direct Firebase Auth call
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // Create user with email and password
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      if (!mounted) return;
-      
-      // Clear form fields
-      _emailController.clear();
-      _passwordController.clear();
-      _confirmPasswordController.clear();
-      
-      // Return to login screen
-      Navigator.of(context).pop();
+      // Get the newly created user's ID
+      final String userId = userCredential.user!.uid;
+
+      // Create user document in Firestore
+      await _firestore.collection('users').doc(userId).set({
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'profileImage': 'assets/profile/default_avatar.png',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        // Success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate to home screen and clear the stack
+        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      }
       
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      
       setState(() {
         switch (e.code) {
           case 'email-already-in-use':
@@ -55,6 +75,9 @@ Future<void> _register() async {
             break;
           case 'invalid-email':
             _errorMessage = 'Invalid email address.';
+            break;
+          case 'operation-not-allowed':
+            _errorMessage = 'Email/password accounts are not enabled.';
             break;
           case 'weak-password':
             _errorMessage = 'Please enter a stronger password.';
@@ -64,7 +87,6 @@ Future<void> _register() async {
         }
       });
     } catch (e) {
-      if (!mounted) return;
       setState(() {
         _errorMessage = 'An unexpected error occurred.';
       });
@@ -76,12 +98,20 @@ Future<void> _register() async {
       }
     }
   }
+
+  String? _validateName(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your $fieldName';
+    }
+    return null;
+  }
+
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Please enter your email';
     }
-    if (!value.contains('@') || !value.contains('.')) {
-      return 'Please enter a valid email';
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      return 'Please enter a valid email address';
     }
     return null;
   }
@@ -144,6 +174,20 @@ Future<void> _register() async {
                   ),
                   const SizedBox(height: 32),
 
+                  // Profile Image Preview
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage: const AssetImage('assets/profile.png'),
+                          backgroundColor: Colors.grey[200],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
                   // Error Message
                   if (_errorMessage != null)
                     Container(
@@ -167,11 +211,49 @@ Future<void> _register() async {
                       ),
                     ),
 
-                  // Form Fields
+                  // First Name Field
+                  TextFormField(
+                    controller: _firstNameController,
+                    enabled: !_isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'First Name',
+                      prefixIcon: Icon(Icons.person_outline, color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (value) => _validateName(value, 'first name'),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Last Name Field
+                  TextFormField(
+                    controller: _lastNameController,
+                    enabled: !_isLoading,
+                    decoration: InputDecoration(
+                      labelText: 'Last Name',
+                      prefixIcon: Icon(Icons.person_outline, color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (value) => _validateName(value, 'last name'),
+                    textInputAction: TextInputAction.next,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Email Field
                   TextFormField(
                     controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
                     enabled: !_isLoading,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[600]),
@@ -181,27 +263,17 @@ Future<void> _register() async {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
-                        ),
-                      ),
                     ),
                     validator: _validateEmail,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
 
+                  // Password Field
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: _obscurePassword,
                     enabled: !_isLoading,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
@@ -218,27 +290,17 @@ Future<void> _register() async {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
-                        ),
-                      ),
                     ),
                     validator: _validatePassword,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: 16),
 
+                  // Confirm Password Field
                   TextFormField(
                     controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
                     enabled: !_isLoading,
+                    obscureText: _obscureConfirmPassword,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       prefixIcon: Icon(Icons.lock_outline, color: Colors.grey[600]),
@@ -255,20 +317,10 @@ Future<void> _register() async {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor,
-                          width: 2,
-                        ),
-                      ),
                     ),
                     validator: _validateConfirmPassword,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _register(),
                   ),
                   const SizedBox(height: 32),
 
@@ -300,7 +352,6 @@ Future<void> _register() async {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
                               ),
                             ),
                     ),
@@ -322,9 +373,7 @@ Future<void> _register() async {
                         ),
                         child: const Text(
                           'Login',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -340,6 +389,8 @@ Future<void> _register() async {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();

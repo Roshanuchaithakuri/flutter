@@ -1,10 +1,10 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'services/scheduler_service.dart';
 import 'pages/login_screen.dart';
 import 'pages/home_page.dart';
+import 'pages/register_page.dart'; // Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,7 +65,14 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const AuthWrapper(),
+      // Define named routes
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const AuthWrapper(),
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }
@@ -89,12 +96,11 @@ class AuthWrapper extends StatelessWidget {
 
         // If we have a user, show HomePage
         if (snapshot.hasData && snapshot.data != null) {
-          return HomePage();
+          return const HomePage();
         }
 
         // Otherwise, show LoginScreen
-        // return const LoginScreen();
-        return HomePage();
+        return const LoginScreen();
       },
     );
   }
